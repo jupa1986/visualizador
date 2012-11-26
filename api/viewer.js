@@ -51,6 +51,7 @@ function createSizePx(size, offset) {
  *                  if error: null
  */
 function getUrlParameter(name) {
+
   var regexp, regexpRes, firstMatch, value;
   regexp = new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)');
   regexpRes = regexp.exec(location.search);
@@ -514,15 +515,15 @@ function createMap(conf) {
   }
 }
 
-/**Generaates a GetFreature information event
+/**captura los datos crea el evento click y genera el popup
 */
 function enableGetFeature()
 {
 
 	map.events.register('click', map, function (e) {
-		 mouseLoc = map.getLonLatFromPixel(e.xy);
+ 					mouseLoc = map.getLonLatFromPixel(e.xy);
                     document.getElementById('responseData').innerHTML = "Loading... please wait...";
-		var format = 'image/png';
+					var format = 'image/png';
                     var params = {
                         REQUEST: "GetFeatureInfo",
                         EXCEPTIONS: "application/vnd.ogc.se_xml",
@@ -566,13 +567,47 @@ function enableGetFeature()
 
 
 }
-
-// sets the HTML provided into the responseData element
+// Global vars for popup use
+var popup;
+var mouseLoc;
+// parse the response provided into the popup
             function setHTML(response){
-//alert(e.xy.y);
-                document.getElementById('responseData').innerHTML = response.responseText;
+ 			var lines = response.responseText.split('\n');
+			var depto,km2;
+			for (var lcv = 0; lcv < (lines.length); lcv++) {
+		            var vals = lines[lcv].replace(/^\s*/,'').replace(/\s*$/,'').replace(/ = /,"=").replace(/'/g,'').split('=');
+            		if (vals[1] == "") {
+                		vals[1] = "Desconocido";
+                    }
 
-}            
+            		if (vals[0].indexOf('nombre') != -1 ) {
+                		depto = vals[1];
+            		} else if (vals[0].indexOf('area_km2') != -1 ) {
+                		km2 = vals[1];
+					}
+            }
+        
+
+				var popup_info = "<img alt=\"Logotipo de GeoBolivia\" src=\"img/geologo_16x16.png\"><h2>" + 
+depto + "</h2><hr/>" +
+                        "<b>&aacute;rea:</b> " + parseFloat(km2).toFixed(3) +
+                        " km2 <hr/>";
+  				if (popup != null) {
+            		popup.destroy();
+            		popup = null;
+		        }
+        		popup = new OpenLayers.Popup.AnchoredBubble("Informion de DEpartamento",
+                                        mouseLoc,
+                                        new OpenLayers.Size(250,120),
+                                        popup_info,
+                                        null,
+                                        true);
+        popup.setBackgroundColor("#bcd2ee");
+        map.addPopup(popup);
+                document.getElementById('responseData').innerHTML = popup_info;   
+
+            };
+            
 
 /**
  * Principal function launched on "onLoad" event
@@ -584,9 +619,8 @@ init = function () {
   conf.getUrlParameters();
   createLayout(conf);
   createMap(conf);
- //loadControls(conf);
-//alert('aqui');
-enableGetFeature();
+//metodo que carga el metodo de evento del click se intento con OpenLayers.Control.SelectFeature pero no funciono
+  enableGetFeature();
 };
 
 window.onload = init;
